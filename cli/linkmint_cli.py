@@ -91,10 +91,14 @@ def printful_set_store_id(store_id: str):
     typer.echo("Updated .env PRINTFUL_STORE_ID")
 
 def _get_stripe_products():
+    print(f"DEBUG: STRIPE_KEY is set: {bool(STRIPE_KEY)}")
     if not STRIPE_KEY:
         typer.echo("STRIPE_SECRET_KEY missing")
         raise typer.Exit(1)
-    return stripe.Product.search(query="active:'true'").auto_paging_iter()
+    products_iter = stripe.Product.search(query="active:'true'").auto_paging_iter()
+    products_list = list(products_iter) # Convert to list to count and iterate multiple times
+    print(f"DEBUG: Found {len(products_list)} active products in Stripe.")
+    return products_list
 
 def _get_printful_products(store_id: str = PRINTFUL_STORE_ID):
     if not PRINTFUL_KEY:
@@ -148,17 +152,21 @@ def printful_ui(store_id: str = typer.Option(PRINTFUL_STORE_ID, "--store-id")):
         live_products_table.add_column("Name", style="magenta")
         live_products_table.add_column("Published", style="green")
         live_products_table.add_column("Theme", style="yellow")
+        live_products_table.add_column("Link", style="blue")
 
         found_live_products = False
         for p in stripe_products:
             md = p.metadata or {}
             if md.get("published") == "true":
                 found_live_products = True
+                slug = md.get("slug", "")
+                product_link = f"{BASE_URL}/p/{slug}" if slug else "N/A"
                 live_products_table.add_row(
                     p.id,
                     p.name,
                     md.get("published", "false"),
                     md.get("theme", "default"),
+                    product_link,
                 )
         
         if not found_live_products:
@@ -246,20 +254,32 @@ def printful_import(printful_product_id: int, currency: str = typer.Option("EUR"
         raise typer.Exit(1)
 
     title = prod_details.get("name","Imported Product")
-    image = ""
-    if prod_details.get("sync_variants") and prod_details["sync_variants"][0].get("product"):
-        image = prod_details["sync_variants"][0]["product"].get("image", "")
-    slug = title.lower().replace(" ","-").replace("/", "-")
+    
+    # Find the mock-up image URL
+    mockup_image = ""
+    if prod_details.get("sync_variants"):
+        for file_obj in prod_details["sync_variants"][0].get("files", []):
+            if file_obj.get("type") == "preview" and file_obj.get("preview_url"):
+                mockup_image = file_obj["preview_url"]
+                break
+    
+    # Use the mockup image if found, otherwise fallback to the product image
+    image_to_use = mockup_image if mockup_image else (prod_details["sync_variants"][0]["product"].get("image", "") if prod_details.get("sync_variants") and prod_details["sync_variants"][0].get("product") else "")
+
+    slug = title.lower().replace(" ","-").replace("/","-")
     sprod = stripe.Product.create(
         name=title,
         description=title,
-        images=[image] if image else [],
+        images=[image_to_use] if image_to_use else [],
         metadata={
             "slug": slug,
             "og_title": title,
             "og_description": title,
-            "og_image": image,
+            "og_image": image_to_use,
             "printful_product_id": str(printful_product_id),
+            "printful_product_name": prod_details.get("sync_product", {}).get("name", ""),
+            "printful_variant_name": prod_details.get("sync_variants", [{}])[0].get("product", {}).get("name", ""),
+            "printful_variant_size": prod_details.get("sync_variants", [{}])[0].get("size", ""),
             "theme": theme,
             "published": "false",
         },
@@ -296,6 +316,7 @@ def product_publish(slug: str):
     product = products[0]
 
     # Update the 'published' metadata field
+    print(f"DEBUG: Attempting to set published metadata for product {product.id} to 'true'")
     stripe.Product.modify(
         product.id,
         metadata={"published": "true"}

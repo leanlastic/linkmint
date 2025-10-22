@@ -7,6 +7,9 @@
   <div class="info">
     <h1>{{ meta.title }}</h1>
     <p>{{ meta.description }}</p>
+    {% if meta.printful_product_name %}<p>Product Name: {{ meta.printful_product_name }}</p>{% endif %}
+    {% if meta.printful_variant_name %}<p>Variant Name: {{ meta.printful_variant_name }}</p>{% endif %}
+    {% if meta.printful_variant_size %}<p>Size: {{ meta.printful_variant_size }}</p>{% endif %}
     <form method="post" action="/api/checkout/session">
       <input type="hidden" name="slug" value="{{ meta.slug }}">
       <button type="submit">Buy now</button>

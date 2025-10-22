@@ -30,9 +30,10 @@ def verify_webhook(sig_header: str, payload: bytes):
 
 def find_product_by_slug(slug: str):
     # Stripe doesn't index metadata; filter client-side
-    products = stripe.Product.search(query=f"active:'true' AND metadata['slug']:'{slug}'")
+    # Fetch all active products and filter client-side
+    products = stripe.Product.list(active=True)
     for p in products.auto_paging_iter():
-        if p.metadata.get("slug") == slug and p.active:
+        if p.metadata.get("slug") == slug:
             return p
     return None
 
