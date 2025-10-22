@@ -277,5 +277,31 @@ def printful_import(printful_product_id: int, currency: str = typer.Option("EUR"
     typer.echo(f"Preview: {url} (unpublished)")
     return
 
+@app.command("product:publish")
+def product_publish(slug: str):
+    """Publishes a product by setting its 'published' metadata to 'true' in Stripe."""
+    if not STRIPE_KEY:
+        typer.echo("STRIPE_SECRET_KEY missing")
+        raise typer.Exit(1)
+
+    # Search for the product by slug in metadata
+    # Stripe's search query for metadata is 'metadata["slug"]:"<slug>"'
+    products = stripe.Product.search(query=f'metadata["slug"]:"{slug}"').data
+
+    if not products:
+        typer.echo(f"No product found with slug: {slug}")
+        raise typer.Exit(1)
+
+    # Assuming slug is unique, take the first product
+    product = products[0]
+
+    # Update the 'published' metadata field
+    stripe.Product.modify(
+        product.id,
+        metadata={"published": "true"}
+    )
+    typer.echo(f"Product with slug '{slug}' published successfully.")
+    typer.echo(f"View product at: {BASE_URL}/p/{slug}")
+
 if __name__ == "__main__":
     app()
