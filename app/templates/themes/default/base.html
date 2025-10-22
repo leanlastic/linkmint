@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ meta.title }}</title>
+  <meta name="description" content="{{ meta.description }}">
+  {% include "partials/meta_og.html" %}
+  <link rel="stylesheet" href="/static/themes/default/styles.css">
+</head>
+<body>
+  <header class="container">
+    <a href="/" class="brand">LinkMint</a>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="container small">
+    <p>© LinkMint</p>
+  </footer>
+</body>
+</html>

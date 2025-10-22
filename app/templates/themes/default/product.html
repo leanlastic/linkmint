@@ -1,0 +1,18 @@
+{% extends "themes/default/base.html" %}
+{% block content %}
+<article class="product">
+  <div class="media">
+    {% if meta.og_image %}<img src="{{ meta.og_image }}" alt="{{ meta.title }}" />{% endif %}
+  </div>
+  <div class="info">
+    <h1>{{ meta.title }}</h1>
+    <p>{{ meta.description }}</p>
+    <form method="post" action="/api/checkout/session">
+      <input type="hidden" name="slug" value="{{ meta.slug }}">
+      <button type="submit">Buy now</button>
+    </form>
+    {% if success %}<p class="success">Payment successful.</p>{% endif %}
+    {% if cancel %}<p class="warning">Payment canceled.</p>{% endif %}
+  </div>
+</article>
+{% endblock %}
