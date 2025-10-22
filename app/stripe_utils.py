@@ -53,3 +53,6 @@ def default_price_for_product(product) -> str | None:
 def create_billing_portal_session(customer_id: str, return_url: str) -> str:
     session = stripe.billing_portal.Session.create(customer=customer_id, return_url=return_url)
     return session.url
+
+def archive_price(price_id: str):
+    stripe.Price.modify(price_id, active=False)
